@@ -58,29 +58,32 @@ label_lamda = return
 gensymmod :: String -> String
 gensymmod s = "lambdafun_" ++ s
 
--- finds lambda free variables
 fvs :: Val -> [String]
-fvs v@(Number n) = []
-fvs v@(Bool b) = []
-fvs (List [Atom "quote" ,(List[])]) = []
-fvs (Atom id) = pure id -- careful when its a char
-fvs (List [Atom "zero?", e0]) = fvs e0
-fvs (List [Atom "empty?", e0]) = fvs e0
-fvs (List [Atom "add1", e0]) = fvs e0
-fvs (List [Atom "sub1", e0]) = fvs e0
-fvs (List [Atom "if", e0, e1, e2]) = (fvs e0) ++ (fvs e1) ++ (fvs e2) 
-fvs (List [Atom "+", e0, e1]) = (fvs e0) ++ (fvs e1)
-fvs (List [Atom "-", e0, e1]) = (fvs e0) ++ (fvs e1)
-fvs (List [Atom "box", e0]) = fvs e0
-fvs (List [Atom "unbox", e0]) = fvs e0
-fvs (List [Atom "cons", e0, e1]) = (fvs e0) ++ (fvs e1)
-fvs (List [Atom "car", e0]) = fvs e0
-fvs (List [Atom "cdr", e0]) = fvs e0
-fvs (List [Atom "let", List [Atom x0, x1], expr]) = (fvs x1) ++ (remq [x0] (fvs expr))
-fvs (List (Atom "letrec", bs, e0 )) = (remq (map head bs) ((fvs e0) ++ (foldr1 (++) (map fvs (map last bs)))))
-fvs v@(List [Atom "λ", xs, l, e0]) = (remq xs (fvs e0))
-fvs (List (Atom f : e : Atom "." : es)) = (fvs e) ++ (foldr1 (++) (map fvs es))
-fvs (List (Atom f : e : es)) = (fvs e) ++ (foldr1 (++) (map fvs es))
+fvs v = nub (fvs_e v)
+
+-- finds lambda free variables
+fvs_e :: Val -> [String]
+fvs_e v@(Number n) = []
+fvs_e v@(Bool b) = []
+fvs_e (List [Atom "quote" ,(List[])]) = []
+fvs_e (Atom id) = pure id -- careful when its a char
+fvs_e (List [Atom "zero?", e0]) = fvs e0
+fvs_e (List [Atom "empty?", e0]) = fvs e0
+fvs_e (List [Atom "add1", e0]) = fvs e0
+fvs_e (List [Atom "sub1", e0]) = fvs e0
+fvs_e (List [Atom "if", e0, e1, e2]) = (fvs e0) ++ (fvs e1) ++ (fvs e2) 
+fvs_e (List [Atom "+", e0, e1]) = (fvs e0) ++ (fvs e1)
+fvs_e (List [Atom "-", e0, e1]) = (fvs e0) ++ (fvs e1)
+fvs_e (List [Atom "box", e0]) = fvs e0
+fvs_e (List [Atom "unbox", e0]) = fvs e0
+fvs_e (List [Atom "cons", e0, e1]) = (fvs e0) ++ (fvs e1)
+fvs_e (List [Atom "car", e0]) = fvs e0
+fvs_e (List [Atom "cdr", e0]) = fvs e0
+fvs_e (List [Atom "let", List [Atom x0, x1], expr]) = (fvs x1) ++ (remq [x0] (fvs expr))
+fvs_e (List (Atom "letrec", bs, e0 )) = (remq (map head bs) ((fvs e0) ++ (foldr1 (++) (map fvs (map last bs)))))
+fvs_e v@(List [Atom "λ", xs, l, e0]) = (remq xs (fvs e0))
+fvs_e (List (Atom f : e : Atom "." : es)) = (fvs e) ++ (foldr1 (++) (map fvs es))
+fvs_e (List (Atom f : e : es)) = (fvs e) ++ (foldr1 (++) (map fvs es))
 
 isImm :: Val -> Bool
 isImm v@(Number _) -> True
