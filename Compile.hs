@@ -6,6 +6,7 @@ import Control.Monad
 import Control.Monad.Except
 import Data.IORef
 import Parser
+import Syntax
 import Control.Monad.Identity
 import Control.Monad.Reader
 import Data.Maybe
@@ -48,20 +49,25 @@ data Reg
     | Rbp
     | Rsp
     | Rdi
+    | Rcx
+    | R8
+    | R9
     deriving (Eq, Show)
 
 rax :: Arg
 rax = R Rax
-
 rbx :: Arg
 rbx = R Rbx
-
 rsp :: Arg
 rsp = R Rsp
-
 rdi :: Arg
 rdi = R Rdi
-
+rcx :: Arg
+rcx = R Rcx
+r8 :: Arg
+r8 = R R8
+r9 :: Arg
+r9 = R R9
 -- data Mem m = String m
 
 -- dont want to use this since its not pure or safe
@@ -160,19 +166,26 @@ compile_entry val = case fst (runCompile_e [] 0 (compile_e val )) of
 --desugar is useful
 compile_entry :: Val -> Compile_e Asm
 compile_entry val = do
-    entry <- compile_tail_e val
-    lambdas <- compile_lambdas_defs (lambdas val)
+    entry <- compile_tail_e le
+    lambdas <- compile_lambdas_defs (lambdas le) 
     return $
         [(Label "entry")] ++ 
         entry ++ 
         [Ret] ++
         lambdas ++
-        [Ret, Label "err", Push Rbp, Call "error", Ret]
+        [Label "err", Push Rbp, Call "error", Ret]
+    where le = label_lambda val
         
 
 -- desugar :: Val -> Val
 -- TODO
 
+--compile labeled lambda into a func
+compile_lambdas_def :: Val -> Compile_e Asm
+compile_lambdas_def (List (Atom "λ", xs, f, e0)) = do
+    c0 <- local (mappend (reverse (xs : fvs v))) $ compile_tail_e e0
+    return $
+        [Label f] ++ c0 ++ [Ret]
 
 
 compile_lambdas_defs :: [Val] -> Compile_e Asm
@@ -201,11 +214,14 @@ compile_tail_e (List [Atom "unbox", e0]) = compile_unbox e0
 compile_tail_e (List [Atom "cons", e0, e1]) = compile_cons e0 e1
 compile_tail_e (List [Atom "car", e0]) = compile_car e0
 compile_tail_e (List [Atom "cdr", e0]) = compile_cdr e0
-compile_tail_e (List [Atom "λ", xs, l, e0]) --TODO, multiple xs, singular e0,
+compile_tail_e e@(List [Atom "λ", xs, LambdaName, e0]) = do
+    l <- gensym
+    compile_lambda xs ("lambda_" ++ l)  (fvs e)
 compile_tail_e (List [Atom "let", List [Atom x0, x1], expr]) = compile_tail_let x0 x1 expr
-compile_tail_e (List (Atom "letrec" : es)) =  --TODO init es, singular (last e0)
+--compile_tail_e (List (Atom "letrec" : es)) =  --TODO init es, singular (last e0)
 compile_tail_e (List (Atom f : Atom "." : es)) = compile_tail_call f es
 compile_tail_e (List (Atom f : es)) = compile_tail_call f es 
+compile_tail_e _ = throwError "compile_tail cannot match"
 
 --actual compilation
 compile_e ::  Val -> Compile_e Asm
@@ -229,17 +245,39 @@ compile_e (List [Atom "unbox", e0]) = compile_unbox e0
 compile_e (List [Atom "cons", e0, e1]) = compile_cons e0 e1
 compile_e (List [Atom "car", e0]) = compile_car e0
 compile_e (List [Atom "cdr", e0]) = compile_cdr e0
-compile_e (List [Atom "λ", xs, l, e0]) --TODO, multiple xs, singular e0,
-compile_e (List (Atom "letrec" : es)) =  --TODO init es, singular (last e0)
+compile_e e@(List [Atom "λ", xs, LambdaName, e0]) = do
+    l <- gensym
+    compile_lambda xs ("lambda_" ++ l)  (fvs e)
+--compile_e (List (Atom "letrec" : es)) =  --TODO init es, singular (last e0)
 compile_e (List (Atom f : Atom "." : es)) = compile_call f es
 compile_e (List (Atom f : es)) = compile_call f es
-compile_e _ = throwError "cannot match on"
+compile_e _ = throwError "compile cannot match"
 
 compile_lambda :: [Val] -> String -> [Val] -> Compile_e Asm
---TODO
+compile_lambda xs f ys = do
+    eh <- copy_env_heap ys 0
+    return $
+        --save label addr
+        [Lea rax (Offset f 0), --TODO let offset typecheck here
+        Mov (Offset Rdi 0) rax,
+        --save env
+        Mov r8 (length ys),
+        Mov (Offset Rdi 1) r8,
+        Mov r9 rdi,
+        Add r9 16] ++ 
+        eh ++
+        --tag and return closure pointer
+        [Mov rax rdi, Or rax imm_type_proc, Add rdi (8 * (2 + (length ys)))]
 
 copy_env_heap :: [Val] -> Int -> Compile_e Asm
---TODO
+copy_env_heap [] i = return []
+copy_env_heap (x:fvs) i = do
+    ceh <- copy_env_heap fvs (i + 1)
+    env <- ask
+    return $
+        [Mov r8 (Offset Rsp (negate (stackLookup x env))), -- pretty important that env is in the right order now
+        Mov (Offset r9 i) r8] ++
+        ceh
 
 compile_integer :: Int -> Compile_e Asm
 compile_integer i = return [Mov rax (I (shift i imm_shift))]
@@ -418,7 +456,6 @@ compile_cdr e0 = do
         -- untag and then read
 
 --compile function call
---TODO
 compile_call :: String -> [Val] -> Compile_e Asm
 compile_call f es = do
     cs <- local (mappend [""]) $ compile_es es
@@ -427,6 +464,25 @@ compile_call f es = do
     return $
         cs ++
         [Sub rsp (I (8 * (length env))), Call (symbolToLabel f), Add rsp (I (8 * (length env)))] 
+
+--lamda function call
+compile_lambda_call :: Val -> [Val] -> Compile_e Asm
+compile_lambda_call e0 es = do
+    cs <- local (mappend [""]) $ compile_es es
+    c0 <- compile_e e0 -- make sure that ^ local doesnt affect this one 
+    env <- ask
+    return $
+        c0 ++
+        [Mov (Offset Rsp i) rax] ++
+        cs ++
+        [Mov rax (Offset Rsp i)] ++
+        assert_proc ++
+        [Xor rax type_proc, Sub rsp (I stack_size)] ++
+        copy_closure_stack (1 + (length es)) ++
+        [Call (Offset Rax 0), Add rsp (I stack_size)]
+    where i = (negate (1 + (length env)))
+          stack_size = (8 * (length env))
+
 
 --TODO
 compile_tail_call :: String -> [Val] -> Compile_e Asm
@@ -437,6 +493,18 @@ compile_tail_call f es = do
         cs ++
         (mov_args (length es) (0 - (length env))) ++
         [Jmp (symbolToLabel f)]
+
+copy_closure_stack :: Int -> Compile_e Asm
+copy_closure_stack n = do
+    cl <- gensym
+    cd <- gensym
+    return $
+        [Mov rax (Offset Rax 1), Mov r9 rax, Mov r9 (I 16), Mov rcx rsp, 
+        Add rcx (I (negate (8 * (n + 1)))), Label copy_loop, Cmp r8 (I 0),
+        Je copy_done, Mov rbx (Offset r9 0), Mov (Offset Rcx 0) rbx, Sub r8 (I 1),
+        Add r9 (I 8), Jmp copy_loop, Label copy_done]
+    where copy_loop = "copy_closure" ++ (show cl)
+          copy_done = "copy_done" ++ (show cd)
 
 mov_args :: Int -> Int -> Asm
 mov_args 0 off = []
@@ -455,7 +523,7 @@ compile_es (v:vs) = do
         c0 ++
         [Mov (Offset Rsp (negate ((length env) + 1))) rax] ++
         cs
-
+{-
 copy_closure_stack :: Compile_e Asm
 --TODO
 --
@@ -471,6 +539,8 @@ compile_letrec_lambdas :: [Val] -> Compile_e Asm
 
 compile_letrec_init :: [Val] -> [Val] -> Compile_e Asm
 --TODO
+---}
+
 
 
 --map over all defines in the program

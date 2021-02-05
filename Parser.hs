@@ -10,6 +10,7 @@ data Val = Number Int
     |Bool Bool
     |Atom String
     |List [Val]
+    |LambdaName 
 --    |Lambda Val String Val --used in preprocessing
     
 spaces :: Parser ()
