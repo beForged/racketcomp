@@ -2,6 +2,7 @@
 module Asm.Printer where
 import Compile
 import Parser
+import Syntax
 import Data.List
 import System.Info
 
@@ -26,6 +27,8 @@ instrToString (Or a a') = "\tor " ++ (argToString a) ++ ", " ++
     (argToString a') ++ "\n"
 instrToString (Xor a a') =  "\txor " ++ (argToString a) ++ ", " ++
     (argToString a') ++ "\n"
+instrToString (Lea a a') =  "\tlea " ++ (argToString a) ++ ", " ++
+    (argToString a') ++ "\n"
 instrToString Ret = "\tret\n"
 instrToString (Label s) = (lToString s) ++ ":\n"
 instrToString (Jmp s) = "\tjmp " ++ (lToString s) ++ "\n"
@@ -33,7 +36,7 @@ instrToString (Je s) = "\tje " ++ (lToString s) ++ "\n"
 instrToString (Jne s) = "\tjne " ++ (lToString s) ++ "\n"
 instrToString (Neg a) = "\tneg " ++ (argToString a) ++ "\n"
 instrToString (Push p) = "\tpush " ++ (regToString p) ++ "\n"
-instrToString (Call c) = "\tcall " ++ (lToString c) ++ "\n"
+instrToString (Call c) = "\tcall " ++ (argToString c) ++ "\n"
 --cmovl, xor, sal, sar
 
 
@@ -41,7 +44,8 @@ instrToString (Call c) = "\tcall " ++ (lToString c) ++ "\n"
 argToString :: Arg -> String
 argToString (R reg) = regToString reg
 argToString (I i) = show i
-argToString (Offset reg i) = "[" ++ (regToString reg) ++ " + " ++ show (i * 8) ++ "]"
+argToString (Offset arg i) = "[" ++ (argToString arg) ++ " + " ++ show (i * 8) ++ "]"
+argToString (L s) = s
 
 --turn args to string registers/values
 regToString :: Reg -> String
@@ -50,6 +54,10 @@ regToString Rbx = "rbx"
 regToString Rbp = "rbp"
 regToString Rsp = "rsp"
 regToString Rdi = "rdi"
+regToString Rcx = "rcx"
+regToString R8 = "r8"
+regToString R9 = "r9"
+
 
 --note that this is 
 labelToString :: Instruction -> String

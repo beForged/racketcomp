@@ -9,7 +9,7 @@ compileFile :: FilePath -> FilePath -> IO ()
 compileFile input output = do
     contents <- readFile input
 --dont forget to make a either for parse errors
-    writeFile output (asmDisplay (compile_file (readExpr contents)))
+    writeFile output (asmDisplay (compile (readExpr contents)))
 
 main = do
     (fst:snd)<- getArgs
