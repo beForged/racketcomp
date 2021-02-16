@@ -20,10 +20,11 @@ import Data.Hashable
 
 type Compile_e a = ReaderT Env (ExceptT String (State.StateT Integer Identity)) a
 
-readExpr :: String -> Val
+readExpr :: String -> [Val]
 readExpr input = case parse (parseExpr) "lisp" input of
     Left err -> error ("bad parse" ++ (show err))
     Right x -> x
+
 
 -- idk how to write the signature for this help
 -- maybe need to lift $ return n ???
@@ -36,53 +37,44 @@ gensym = do
 
 --consider changing label_lambda return into a tuple and putting int val into here so
 --its impossible to duplicate labels
-compile :: Val -> Asm
-compile val = case fst (runCompile_e [] 0 (compile_entry val)) of
+compile :: [Val] -> Asm
+compile val = case fst (runCompile_e [] 0 (compiler [val])) of
     Left er -> error (er)
     Right asm -> asm
 
+--TODO ^ make this work on [Val] where there may be multiple func declarations/defines
+--for each define, compile and append. Then compile the rest (lambdas + 'main') 
+--and place after entry label
+--defines are then appended after with lambda defs
+--need to find a way to determine if it is a func define or entry code that is executed as 'main'
+--(also think about separate files, file could be only function declarations/defines)
+--TODO
 
--- primitive, assumes form (begin ((define ...) ...) e0)
-{-
-compile :: Val -> Compile_e Asm
-compile (List (Atom "begin" : xs)) = do
-    ds <- compile_defines (init xs)
-    e0 <- compile_entry (last xs)
-    return $ e0 ++ ds 
-compile val = do
-    compile_entry val
--}
-{-
-    e0 <- case fst (runCompile_e [] 0 (compile_entry (last xs))) of
-        Left err -> error (err)
-        Right asm -> asm
-compile val = case fst (runCompile_e [] 0 (compile_entry val)) of
-    Left err -> error (err)
-    Right asm -> asm
--}
+-- currently assumes only one non define s expression esists
+-- how to determine otherwise (preprocess? statefully?)
+compiler :: [Val] -> Compile_e Asm
+compiler [] = return [] -- error
+compiler [List (Atom "define" : xs)] = compile_define ([List (Atom "define": xs)])
+compiler (List (Atom "define" : xs) : code) = --append
+compiler (x : xs) = do --assume this is entry
+    defs <- compiler xs
+    compile_entry defs x
+    
 
--- compile entry point 
--- fst ~~~ because i dont care about gensym val
-{-
-compile_entry :: Val -> Either String Asm
-compile_entry val = case fst (runCompile_e [] 0 (compile_e val )) of
-    Left er -> throwError ("error in entry: " ++ er)
-    Right val -> Right $ 
-        [(Label "entry")] ++ 
-        val ++ 
-        [Ret, Label "err", Push Rbp, Call "error", Ret]
--}
 
---desugar is useful
-compile_entry :: Val -> Compile_e Asm
-compile_entry val = do
+--want to probably write compile_define that outputs Compile_e Asm for a define 
+--already written (btw)
+--(code exists to do it, just write the helper)
+--also want to write a 'sorter' to send code to either compile.
+compile_entry :: Compile_e Asm -> Val -> Compile_e Asm
+compile_entry defs val = do
     entry <- compile_tail_e le
     lambdas <- compile_lambdas_defs (lambdas le) 
     return $
         [(Label "entry")] ++ 
         entry ++ 
         [Ret] ++
-        lambdas ++
+        lambdas ++ defs
         [Label "err", Push Rbp, Call (L "error"), Ret]
     where le = label_lambda 0 val --potentially move to before runstate
         

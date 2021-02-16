@@ -10,6 +10,7 @@ data Val = Number Int
     |Bool Bool
     |Atom String
     |List [Val]
+    |Heading String
     
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -38,10 +39,17 @@ parseAtom = do
         _ -> Atom atom
 
 parseList :: Parser Val
-parseList = (sepBy parseExpr spaces) >>= \x -> return (List x)
+parseList = (sepBy parseEx spaces) >>= \x -> return (List x)
 
-parseExpr :: Parser Val
-parseExpr = parseNumber  
+parseExpr :: Parser [Val]
+parseExpr = do
+    h <- optional heading -- can replace with option x p
+    spaces   
+    r <- parseEx `sepBy` (spaces)
+    return r
+
+parseEx :: Parser Val
+parseEx = parseNumber  
     <|> parseString
     <|> parseAtom
     <|> parseQuoted
@@ -54,19 +62,27 @@ parseExpr = parseNumber
 parseQuoted :: Parser Val
 parseQuoted = do
     char '\''
-    x <- parseExpr
+    x <- parseEx
     return (List [Atom "quote", x])
+
+heading :: Parser Val
+heading = do
+    string "#"
+    h <- manyTill anyChar (try (string "\n"))
+    return (Heading h)
+
 unwords' :: [String] -> String
 unwords' = concat . intersperse ", "
 
 showVal :: Val -> String
 --add ""?
 showVal (String xs) = "String " ++ xs
-showVal (Number n) = "Number" ++ (show n)
+showVal (Number n) = "Number " ++ (show n)
 showVal (Bool True) = "#t"
 showVal (Bool False) = "#f"
 showVal (Atom name) = "Atom " ++ name
 showVal (List xs) = "(List [" ++ (unwords'.map showVal) xs ++ "])"
+showVal (Heading h) = "#" ++ h
 --showVal 
 
 instance Show Val where show = showVal

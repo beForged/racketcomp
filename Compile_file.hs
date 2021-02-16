@@ -3,6 +3,7 @@ import Compile
 import Asm.Printer
 import System.IO
 import System.Environment
+import System.FilePath.Posix
 
 --input file, output file name
 compileFile :: FilePath -> FilePath -> IO ()
@@ -17,5 +18,9 @@ main = do
     _  <- compileFile fst (head snd)
     putStrLn "finished"
 
+parseFile :: FilePath -> IO ()
+parseFile input = do
+    contents <- readFile input
+    writeFile (replaceExtension input "par") (show (readExpr contents))
 
 
