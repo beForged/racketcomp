@@ -52,21 +52,41 @@ compile val = case fst (runCompile_e [] 0 (compiler [val])) of
 
 -- currently assumes only one non define s expression esists
 -- how to determine otherwise (preprocess? statefully?)
+--
+-- compiler function will collect all separate defs and compile them into one
+-- fold over on tuple
+{-
 compiler :: [Val] -> Compile_e Asm
-compiler [] = return [] -- error
-compiler [List (Atom "define" : xs)] = compile_define ([List (Atom "define": xs)])
-compiler (List (Atom "define" : xs) : code) = --append
+compiler [] = throwError "no input to compiler"
+compiler [List (Atom "define" : xs)] = --compile_define ([List (Atom "define": xs)]) -- these need to have lambda transforms
+compiler (List (Atom "define" : xs) : code) = compiler (code : 
 compiler (x : xs) = do --assume this is entry
     defs <- compiler xs
-    compile_entry defs x
-    
+    entry <- compile_entry x
+    return $
+        entry ++ def ++ 
+        [Label "err", Push Rbp, Call (L "error"), Ret]
+-}
 
+compiler :: [Val] -> Compile_e Asm
+compiler lst = do
+    let (defs, exec) = accum lst
+    let ldef = (label_lambda 0 defs)
+    let  
+    --lambdafy both (map over?)
+    --compile entry on each exec and put those together
+    --compile all functions and append after entry
+    
+accum :: [Val] -> ([Val], [Val]) -> ([Val] -> [Val])
+accum [] (d, e) = (d, reverse e) -- reverse e to preserve execution order
+accum (List (Atom "define" : xs) : cds) (defs, exec) = accum cds (((List (Atom "define" :xs)) : defs), exec)
+accum (x : xs) (defs, exec) = accum x (defs, x : exec)
 
 --want to probably write compile_define that outputs Compile_e Asm for a define 
 --already written (btw)
 --(code exists to do it, just write the helper)
 --also want to write a 'sorter' to send code to either compile.
-compile_entry :: Compile_e Asm -> Val -> Compile_e Asm
+compile_entry ::  Val -> Compile_e Asm
 compile_entry defs val = do
     entry <- compile_tail_e le
     lambdas <- compile_lambdas_defs (lambdas le) 
@@ -74,8 +94,7 @@ compile_entry defs val = do
         [(Label "entry")] ++ 
         entry ++ 
         [Ret] ++
-        lambdas ++ defs
-        [Label "err", Push Rbp, Call (L "error"), Ret]
+        lambdas 
     where le = label_lambda 0 val --potentially move to before runstate
         
 

@@ -138,33 +138,99 @@ lambdas v@(List [Atom "λ", xs, l, e0]) = v:(lambdas e0)
 lambdas (List (Atom f : e : Atom "." : es)) = (lambdas e) ++ (foldl1 (++) (map lambdas es))
 lambdas (List (Atom f : e : es)) = (lambdas e) ++ (foldl1 (++) (map lambdas es))
 
+--TODO replace this with a state monad - its too awkward otherwise
+{-
 --this adds a unique name for each lambda so we can track them 
-label_lambda :: Int -> Val -> Val
-label_lambda i v@(Number n) = (Number n)
-label_lambda i v@(Bool b) = Bool b
-label_lambda i (Atom id) = Atom id 
-label_lambda i (List [Atom "quote" ,(List[])]) =  (List [Atom "quote", (List[])])
-label_lambda i (List [Atom "zero?", e0]) =  (List [Atom "zero?", (label_lambda i e0)])
-label_lambda i (List [Atom "empty?", e0]) =  (List [Atom "empty?", (label_lambda i e0)])
-label_lambda i (List [Atom "add1", e0]) =  (List [Atom "add1", (label_lambda i e0)])
-label_lambda i (List [Atom "sub1", e0]) =  (List [Atom "sub1", (label_lambda i e0)])
-label_lambda i (List [Atom "if", e0, e1, e2]) =  (List [Atom "if", (label_lambda i e0), (label_lambda i e1), (label_lambda i e2)])
-label_lambda i (List [Atom "+", e0, e1]) =  (List [Atom "+", (label_lambda i e0), (label_lambda i e1)])
-label_lambda i (List [Atom "-", e0, e1]) =  (List [Atom "-", (label_lambda i e0), (label_lambda i e1)])
-label_lambda i (List [Atom "box", e0]) =  (List [Atom "box", (label_lambda i e0)])
-label_lambda i (List [Atom "unbox", e0]) =  (List [Atom "unbox", (label_lambda i e0)])
-label_lambda i (List [Atom "cons", e0, e1]) =  (List [Atom "cons", (label_lambda i e0), (label_lambda i e1)])
-label_lambda i (List [Atom "car", e0]) =  (List [Atom "car", (label_lambda i e0)])
-label_lambda i (List [Atom "cdr", e0]) =  (List [Atom "cdr", (label_lambda i e0)])
-label_lambda i (List [Atom "let", List [Atom x0, x1], expr]) = 
-     (List [Atom "let", List [Atom x0, (label_lambda i x1)], (label_lambda i expr)])
+label_lambda :: Int -> Val -> (Val, Int)
+label_lambda i v@(Number n) = ((Number n) ,i)
+label_lambda i v@(Bool b) = (Bool b, i)
+label_lambda i (Atom id) = (Atom id , i)
+label_lambda i (List [Atom "quote" ,(List[])]) = ( (List [Atom "quote", (List[])]), i)
+label_lambda i (List [Atom "zero?", e0]) = ( (List [Atom "zero?", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "empty?", e0]) = ( (List [Atom "empty?", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "add1", e0]) = ( (List [Atom "add1", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "sub1", e0]) = ( (List [Atom "sub1", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "if", e0, e1, e2]) = ( (List [Atom "if", fst (label_lambda i e0), fst (label_lambda i e1), fst (label_lambda i e2)]), i)
+label_lambda i (List [Atom "+", e0, e1]) = ( (List [Atom "+", fst (label_lambda i e0), fst (label_lambda i e1)]), i)
+label_lambda i (List [Atom "-", e0, e1]) = ( (List [Atom "-", fst (label_lambda i e0), fst (label_lambda i e1)]), i)
+label_lambda i (List [Atom "box", e0]) = ( (List [Atom "box", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "unbox", e0]) = ( (List [Atom "unbox", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "cons", e0, e1]) = ( (List [Atom "cons", fst (label_lambda i e0), fst (label_lambda i e1)]), i)
+label_lambda i (List [Atom "car", e0]) = ( (List [Atom "car", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "cdr", e0]) = ( (List [Atom "cdr", fst (label_lambda i e0)]), i)
+label_lambda i (List [Atom "let", List [Atom x0, x1], expr]) =
+     ((List [Atom "let", List [Atom x0, fst (label_lambda i x1)], fst (label_lambda i expr)]), i)
+label_lambda i v@(List [Atom "λ", xs, e0]) = ((List [Atom "λ", xs, Atom (gensymmod (show i)), fst (label_lambda (i + 1) e0)]) , i + 1)
+--TODO apply
+--label_lambda i (List (Atom f : e : Atom "." : es)) = ( (List (Atom f : (fst (label_lambda i e)) : Atom "." : (map (label_lambda i) es))), i)
+--label_lambda i (List (Atom f : e : es)) = ( (List (Atom f : (label_lambda i e) : (map (label_lambda i) es))), i)
+label_lambda _ x = (error ("label_lambda error on: " ++ (show x))
 --label_lambda i (List [Atom "letrec", bs, e0]) = 
 --     (List [Atom "letrec", (List (map (\b -> [head b, (label_lambda i last b)]) bs)), (label_lambda i e0)])
 --TODO
-label_lambda i v@(List [Atom "λ", xs, e0]) = (List [Atom "λ", xs, Atom (gensymmod (show i)), (label_lambda (i + 1) e0)]) 
-label_lambda i (List (Atom f : e : Atom "." : es)) =  (List (Atom f : (label_lambda i e) : Atom "." : (map (label_lambda i) es)))
-label_lambda i (List (Atom f : e : es)) =  (List (Atom f : (label_lambda i e) : (map (label_lambda i) es)))
-label_lambda _ x = error ("label_lambda error on: " ++ (show x))
+-}
+
+
+label_lambda :: Val -> State Int Val
+label_lambda v@(Number n) = return v
+label_lambda v@(Bool b) = return v
+label_lambda v@(Atom id) = return v
+label_lambda v@(List [Atom "quote", (List [])]) = return v
+label_lambda (List [Atom "zero?", e0]) = do
+    c0 <- label_lambda e0
+    return $ List [Atom "zero?", c0]
+label_lambda (List [Atom "empty?", e0]) = do
+    c0 <- label_lambda e0
+    return $ List [Atom "emtpy?", c0]
+label_lambda (List [Atom "add1", e0]) = do
+    c0 <- label_lambda e0
+    return (List [Atom "add1", c0]) 
+label_lambda (List [Atom "sub1", e0]) = do
+    c0 <- label_lambda e0
+    return (List [Atom "sub1", c0]) 
+label_lambda (List [Atom "if", e0, e1, e2]) = do
+    c0 <- label_lambda e0
+    c1 <- label_lambda e1
+    c2 <- label_lambda e2
+    return $ List [Atom "if", c0, c1, c2]
+label_lambda (List [Atom "+", e0, e1]) = do
+    c0 <- label_lambda e0
+    c1 <- label_lambda e1
+    return $ (List [Atom "+", c0, c1])
+label_lambda (List [Atom "-", e0, e1]) = do
+    c0 <- label_lambda e0
+    c1 <- label_lambda e1
+    return $ (List [Atom "-", c0, c1])
+label_lambda (List [Atom "box", e0]) = do
+    c0 <- label_lambda e0
+    return $ List [Atom "box", c0]
+label_lambda (List [Atom "unbox", e0]) = do
+    c0 <- label_lambda e0
+    return $ List [Atom "unbox", c0]
+label_lambda (List [Atom "cons", e0, e1]) = do
+    c0 <- label_lambda e0
+    c1 <- label_lambda e1
+    return $ List [Atom "cons", c0, c1]
+label_lambda (List [Atom "car", e0]) = do
+    c0 <- label_lambda e0
+    return $ List [Atom "car", c0]
+label_lambda (List [Atom "cdr", e0]) = do
+    c0 <- label_lambda e0
+    return $ List [Atom "cdr", c0]
+--TODO the var bindings are wrong, should be more than 1
+label_lambda (List [Atom "let", List [Atom x0, x1], expr]) = do
+    c0 <- label_lambda expr
+    return $ List [Atom "let", List [Atom x0, x1], c0]
+label_lambda (List [Atom "λ", xs, e0]) = do
+    lb <- gensym'
+    c0 <- label_lambda e0
+    return $ List [Atom "λ", xs, Atom (gensymmod (show lb)), c0]
+
+gensym' :: State Int Int
+gensym' = do
+    n <- get
+    put (n + 1)
+    return n 
 
 gensymmod :: String -> String
 gensymmod s = "lambdafun_" ++ s
