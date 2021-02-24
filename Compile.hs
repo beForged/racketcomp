@@ -71,7 +71,7 @@ compiler (x : xs) = do --assume this is entry
 compiler :: [Val] -> Compile_e Asm
 compiler lst = do
     let (defs, exec) = accum lst
-    let ldef = (label_lambda 0 defs)
+    let (ldef, lexec) = (label_lam ldef, label_lam exec)
     let  
     --lambdafy both (map over?)
     --compile entry on each exec and put those together
@@ -82,6 +82,10 @@ accum [] (d, e) = (d, reverse e) -- reverse e to preserve execution order
 accum (List (Atom "define" : xs) : cds) (defs, exec) = accum cds (((List (Atom "define" :xs)) : defs), exec)
 accum (x : xs) (defs, exec) = accum x (defs, x : exec)
 
+--better to use runstate so we can extract the int value out of it
+label_lam :: [Val] -> [Val]
+label_lam ls = evalState (mapM label_lambda ls) 0
+     
 --want to probably write compile_define that outputs Compile_e Asm for a define 
 --already written (btw)
 --(code exists to do it, just write the helper)
