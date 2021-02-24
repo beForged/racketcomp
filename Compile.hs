@@ -71,7 +71,7 @@ compiler (x : xs) = do --assume this is entry
 compiler :: [Val] -> Compile_e Asm
 compiler lst = do
     let (defs, exec) = accum lst ([], [])
-    let (ldef, lexec) = (label_lam ldef, label_lam exec)
+    let (ldef, lexec) = (label_lam defs, label_lam exec)
     --let exec_f = foldr (++) lexec [] 
     --entry <- map compile_tail_e lexec --creates a list of compile_e val
     entry <- foldM fldr [] lexec 
