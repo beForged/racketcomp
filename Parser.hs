@@ -43,9 +43,9 @@ parseList = (sepBy parseEx spaces) >>= \x -> return (List x)
 
 parseExpr :: Parser [Val]
 parseExpr = do
-    h <- optional heading -- can replace with option x p
-    spaces   
-    r <- parseEx `sepBy` (spaces)
+    h <- try (option (Heading "none") heading) -- can replace with option x p
+    optional spaces   
+    r <- parseEx `endBy` (spaces)
     return r
 
 parseEx :: Parser Val

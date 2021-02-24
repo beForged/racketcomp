@@ -38,7 +38,7 @@ gensym = do
 --consider changing label_lambda return into a tuple and putting int val into here so
 --its impossible to duplicate labels
 compile :: [Val] -> Asm
-compile val = case fst (runCompile_e [] 0 (compiler [val])) of
+compile val = case fst (runCompile_e [] 0 (compiler val)) of
     Left er -> error (er)
     Right asm -> asm
 
@@ -70,12 +70,12 @@ compiler (x : xs) = do --assume this is entry
 
 compiler :: [Val] -> Compile_e Asm
 compiler lst = do
-    let (defs, exec) = accum lst
+    let (defs, exec) = accum lst ([], [])
     let (ldef, lexec) = (label_lam ldef, label_lam exec)
     --let exec_f = foldr (++) lexec [] 
     --entry <- map compile_tail_e lexec --creates a list of compile_e val
     entry <- foldM fldr [] lexec 
-    defs <- map (compile_lambdas_defs . lambdas) ldef --TODO
+    defs <- foldM fldr' [] ldef
     return $
         [(Label "entry")] ++
         entry ++
@@ -87,18 +87,23 @@ compiler lst = do
     --compile entry on each exec and put those together
     --compile all functions and append after entry
     
-accum :: [Val] -> ([Val], [Val]) -> ([Val] -> [Val])
-accum [] (d, e) = (d, reverse e) -- reverse e to preserve execution order
+accum :: [Val] -> ([Val], [Val]) -> ([Val], [Val])
+accum [] (d, e) = (d, f) where f = reverse e -- reverse e to preserve execution order
 accum (List (Atom "define" : xs) : cds) (defs, exec) = accum cds (((List (Atom "define" :xs)) : defs), exec)
-accum (x : xs) (defs, exec) = accum x (defs, x : exec)
+accum (x : xs) (defs, exec) = accum xs (defs, x : exec)
 
 --can use runstate to we can extract the int value out of it
 label_lam :: [Val] -> [Val]
-label_lam ls = evalState (mapM label_lambda ls) 0
+label_lam ls = State.evalState (mapM label_lambda ls) 0
      
 fldr :: Asm -> Val -> Compile_e Asm
 fldr asm val = do
     ex <- compile_tail_e val
+    return $ asm ++ ex
+
+fldr' :: Asm -> Val -> Compile_e Asm
+fldr' asm val = do
+    ex <- compile_lambdas_defs . lambdas $ val
     return $ asm ++ ex
 --want to probably write compile_define that outputs Compile_e Asm for a define 
 --already written (btw)
