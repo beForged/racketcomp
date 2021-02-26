@@ -135,8 +135,8 @@ lambdas (List [Atom "cdr", e0]) = lambdas e0
 lambdas (List [Atom "let", List [Atom x0, x1], expr]) = (lambdas x1) ++ (lambdas expr)
 --lambdas (List [Atom "letrec", List bs, e0]) = (foldr1 (++) (map (lambdas . last) [bs])) ++ (lambdas e0)
 lambdas v@(List [Atom "λ", xs, l, e0]) = v:(lambdas e0)
-lambdas (List (Atom f : e : Atom "." : es)) = (lambdas e) ++ (foldl1 (++) (map lambdas es))
-lambdas (List (Atom f : e : es)) = (lambdas e) ++ (foldl1 (++) (map lambdas es))
+lambdas (List (Atom f : e : Atom "." : es)) = (lambdas e) ++ (foldl (++) [] (map lambdas es))
+lambdas (List (Atom f : e : es)) = (lambdas e) ++ (foldl (++) [] (map lambdas es))
 
 --TODO replace this with a state monad - its too awkward otherwise
 {-
@@ -217,7 +217,6 @@ label_lambda (List [Atom "car", e0]) = do
 label_lambda (List [Atom "cdr", e0]) = do
     c0 <- label_lambda e0
     return $ List [Atom "cdr", c0]
---TODO the var bindings are wrong, should be more than 1
 label_lambda (List [Atom "let", List [Atom x0, x1], expr]) = do
     c0 <- label_lambda expr
     return $ List [Atom "let", List [Atom x0, x1], c0]
@@ -225,6 +224,11 @@ label_lambda (List [Atom "λ", xs, e0]) = do
     lb <- gensym'
     c0 <- label_lambda e0
     return $ List [Atom "λ", xs, Atom (gensymmod (show lb)), c0]
+label_lambda (List (Atom f : e : es)) = do
+    c <- label_lambda e
+    ds <- mapM label_lambda es
+    return $ List (Atom f : c : ds)
+--TODO letrec
 
 gensym' :: State Int Int
 gensym' = do

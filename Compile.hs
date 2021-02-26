@@ -42,13 +42,6 @@ compile val = case fst (runCompile_e [] 0 (compiler val)) of
     Left er -> error (er)
     Right asm -> asm
 
---TODO ^ make this work on [Val] where there may be multiple func declarations/defines
---for each define, compile and append. Then compile the rest (lambdas + 'main') 
---and place after entry label
---defines are then appended after with lambda defs
---need to find a way to determine if it is a func define or entry code that is executed as 'main'
---(also think about separate files, file could be only function declarations/defines)
---TODO
 
 -- currently assumes only one non define s expression esists
 -- how to determine otherwise (preprocess? statefully?)
@@ -72,10 +65,12 @@ compiler :: [Val] -> Compile_e Asm
 compiler lst = do
     let (defs, exec) = accum lst ([], [])
     let (ldef, lexec) = (label_lam defs, label_lam exec)
+    let ldef' = ldef -- ++ (concat (map lambdas exec))
+    --TODO add lambdas in here
     --let exec_f = foldr (++) lexec [] 
     --entry <- map compile_tail_e lexec --creates a list of compile_e val
     entry <- foldM fldr [] lexec 
-    defs <- foldM fldr' [] ldef
+    defs <- compile_lambdas_defs ldef'
     return $
         [(Label "entry")] ++
         entry ++
@@ -83,9 +78,6 @@ compiler lst = do
         defs ++
         [Label "err", Push Rbp, Call (L "error"), Ret]
         
-    --lambdafy both (map over?)
-    --compile entry on each exec and put those together
-    --compile all functions and append after entry
     
 accum :: [Val] -> ([Val], [Val]) -> ([Val], [Val])
 accum [] (d, e) = (d, f) where f = reverse e -- reverse e to preserve execution order
@@ -101,10 +93,6 @@ fldr asm val = do
     ex <- compile_tail_e val
     return $ asm ++ ex
 
-fldr' :: Asm -> Val -> Compile_e Asm
-fldr' asm val = do
-    ex <- compile_lambdas_defs . lambdas $ val
-    return $ asm ++ ex
 --want to probably write compile_define that outputs Compile_e Asm for a define 
 --already written (btw)
 --(code exists to do it, just write the helper)
@@ -128,28 +116,20 @@ compile_entry defs val = do
 
 
 --compile labeled lambda into a func
-compile_lambdas_def :: Val -> Compile_e Asm
-compile_lambdas_def v@(List [Atom "λ", xs,Atom f, e0]) = do 
+compile_lambdas_def :: Asm -> Val -> Compile_e Asm
+compile_lambdas_def asm v@(List [Atom "λ", xs,Atom f, e0]) = do 
         c0 <- local (mappend (reverse ((lstAtom xs) ++ (fvs v)))) $ compile_tail_e e0
-        n <- gensym
         return $ 
-            [Label f] ++ c0 ++ [Ret]
+            asm ++ [Label f] ++ c0 ++ [Ret]
+compile_lambdas_def asm v@(List [Atom "define", List (Atom name : vars), body]) = do
+    def <- compile_define v
+    return $ asm ++ def
+    
 
 
 compile_lambdas_defs :: [Val] -> Compile_e Asm
-compile_lambdas_defs ls = folder_tempname (map compile_lambdas_def ls) 
+compile_lambdas_defs ls = foldM compile_lambdas_def [] ls
 
---TODO move these down
-folder_tempname :: [Compile_e Asm] -> Compile_e Asm
-folder_tempname [] =  return [] 
-folder_tempname [x] = x
-folder_tempname (x:xs) = do
-    cs <- folder_tempname xs
-    c <- folder_tempname [x]
-    return $ c ++ cs
-
-dummy :: Compile_e Asm
-dummy = return []
 
 lstAtom :: Val -> [String]
 lstAtom (Atom f) = [f]
@@ -226,7 +206,7 @@ compile_lambda xs f ys = do
     eh <- copy_env_heap ys 0
     return $
         --save label addr
-        [Lea rax (Offset (L f) 0), --TODO let offset typecheck here
+        [Lea rax (Offset (L f) 0), 
         Mov (Offset rdi 0) rax,
         --save env
         Mov r8 (I (length ys)),
