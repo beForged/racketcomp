@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3c3ef68a2de7e698bf93641c3b7d698a427f08cce6f3b6dc9200ec2259bee2bb
+-- hash: ba7df26afa8dd3e4f4a67f413cfb8cfb65b4e4050a4be3fabc44ac1b0bf25336
 
 name:           smallScheme
 version:        0.1.0.0
@@ -67,6 +67,7 @@ test-suite smallScheme-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Regression
       Paths_smallScheme
   hs-source-dirs:
       test

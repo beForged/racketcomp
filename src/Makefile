@@ -23,8 +23,9 @@ char.o: char.c types.h
 	nasm -f elf64 -o $@ $<
 
 %.s: %.rkt
-	ghc -dynamic --make Compile_file.hs 
-	./Compile_file $< $@
+	#ghc -dynamic --make Compile_file.hs 
+	#./Compile_file $< $@
+	stack exec smallScheme-exe $< $@
 
 clean:
 	rm *.o *.s *.run *.hi
