@@ -1,4 +1,4 @@
-module Main where
+module Compile_file where
 import Compile
 import Asm.Printer
 import System.IO
@@ -12,7 +12,7 @@ compileFile input output = do
 --dont forget to make a either for parse errors
     writeFile output (asmDisplay (compile (readExpr contents)))
 
-main = do
+entry = do
     (fst:snd)<- getArgs
     --need better than this for sure lol
     _  <- compileFile fst (head snd)
