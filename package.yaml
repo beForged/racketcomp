@@ -47,7 +47,7 @@ executables:
 
 tests:
   smallScheme-test:
-    main:                Spec.hs
+    main:                Regression.hs
     source-dirs:         test
     ghc-options:
     - -threaded
@@ -55,3 +55,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - smallScheme
+    - tasty
+    - tasty-hunit
+    - tasty-golden
+    - process
+    - directory

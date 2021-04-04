@@ -11,6 +11,7 @@ data Val = Number Int
     |Atom String
     |List [Val]
     |Heading String
+	deriving (Eq)
     
 spaces :: Parser ()
 spaces = skipMany1 space

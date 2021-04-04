@@ -4,4 +4,6 @@
 *.s
 .stack-work/
 *.swp
+*.ref
+*.res
 
