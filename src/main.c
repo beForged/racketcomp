@@ -44,7 +44,7 @@ void print_result(int64_t result) {
             print_result(*((int64_t *)(result ^ type_box)));
             break;
         case type_pair:
-            printf("(");
+            printf("'(");
             print_pair(result);
             printf(")");
             break;
