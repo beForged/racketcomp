@@ -50,9 +50,8 @@ testSetup = do
 	-- compile all racket files after changing the extensions to .run for make
 	compileFiles $ replaceExt regressions ".run"
 	-- generate result files for diffing
-	-- TODO probably need turtle for this
-	-- runExes (replaceExt regressions ".run") (replaceExt regressions ".res")
-	_ <- Turtle.shell "./test/canonical.sh" Turtle.empty
+	runExes (replaceExt regressions ".run") (replaceExt regressions ".res")
+    --	_ <- Turtle.shell "./test/canonical.sh" Turtle.empty
 	print "test setup complete"
 
 -- should never be differing list size since both are transformed from same list

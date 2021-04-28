@@ -60,3 +60,4 @@ tests:
     - tasty-golden
     - process
     - directory
+    - turtle
