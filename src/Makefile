@@ -10,7 +10,7 @@ else
 endif
 
 %.run: %.o main.o char.o
-	gcc main.o char.o $< -o $@
+	gcc main.o char.o $< -o $@ 
 
 main.o: main.c types.h
 	gcc -c main.c -o main.o
@@ -23,8 +23,7 @@ char.o: char.c types.h
 	nasm -f elf64 -o $@ $<
 
 %.s: %.rkt
-	ghc -dynamic --make Compile_file.hs 
-	./Compile_file $< $@
+	stack exec smallScheme-exe $< $@
 
 clean:
 	rm *.o *.s *.run *.hi

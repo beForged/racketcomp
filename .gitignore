@@ -2,4 +2,8 @@
 *.o
 *.hi
 *.s
+.stack-work/
+*.swp
+*.ref
+*.res
 
