@@ -31,6 +31,8 @@ diffTest :: IO TestTree
 diffTest = do
 	-- gets all result files (compiled and run files)
 	regressions <- findByExtension [".rkt"] "./test/regression/features"
+	--TODO add other tests
+	features <- findByExtension [".rkt"] "./test/regression/programs"
 	-- list comprehension running golden diff for each reference file found
 	return $ testGroup "diff golden tests" [ goldenVsFile ("diffing " ++ (takeBaseName golden)) golden output dummy 
 		| golden <- replaceExt regressions ".ref", let output = replaceExtension golden ".res"]
@@ -52,7 +54,7 @@ testSetup = do
 	-- generate result files for diffing
 	-- TODO probably need turtle for this
 	-- runExes (replaceExt regressions ".run") (replaceExt regressions ".res")
-	_ <- Turtle.shell "./test/canonical.sh" Turtle.empty
+	_ <- Turtle.shell "./test/regression/features/runner.sh" Turtle.empty
 	print "test setup complete"
 
 -- should never be differing list size since both are transformed from same list

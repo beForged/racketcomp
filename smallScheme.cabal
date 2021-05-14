@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9634ce358816003a1339dd2df44594cab2c6b81a745518bf9a0028daf317c334
+-- hash: 10d8cb142565443383bdb23a364b91c04dd2e0c1cdb3b99cd5c761bd9b59bffb
 
 name:           smallScheme
 version:        0.1.0.0
@@ -84,4 +84,5 @@ test-suite smallScheme-test
     , tasty-golden
     , tasty-hunit
     , transformers
+    , turtle
   default-language: Haskell2010
