@@ -40,7 +40,7 @@ void print_result(int64_t result) {
             print_immediate(result);
             break;
         case type_box:
-            printf("#&");
+            printf("'#&");
             print_result(*((int64_t *)(result ^ type_box)));
             break;
         case type_pair:
@@ -70,7 +70,7 @@ void print_immediate(int64_t a) {
             printf("#%c", a >> imm_shift ? 't' : 'f');
             break;
         case imm_val_empty:
-            printf("()");
+            printf("'()");
             break;
         case imm_type_char:
             print_char(a);
