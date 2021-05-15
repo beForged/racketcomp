@@ -29,4 +29,4 @@ data Binary
 	| Eq Sexp Sexp
 	| Cons Sexp Sexp
 
-data Id	= Id String
+type Id	= String

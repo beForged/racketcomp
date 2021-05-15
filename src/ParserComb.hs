@@ -1,4 +1,4 @@
-module Parser where
+module ParserComb where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import System.Environment
 import Control.Monad

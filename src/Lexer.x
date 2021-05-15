@@ -23,11 +23,15 @@ tokens :-
 $white+				;
 $digit+				{ lex (TokenNum . read) }
 $alpha [$alpha $digit \_ \']* 	{ lex TokenId 		}
+true				{ lex' (TokenBool True)	}
+false				{ lex' (TokenBool False)	}
+\'()				{ lex' TokenEmpty	}
 \'				{ lex' TokenQuote	}
 if				{ lex' TokenIf		}
 \+				{ lex' TokenPlus	}
 \-				{ lex' TokenMinus	}
 \=				{ lex' TokenEq 		}
+eq?				{ lex' TokenEq		}
 box				{ lex' TokenBox		}
 unbox				{ lex' TokenUnbox	}
 cons				{ lex' TokenCons	}
@@ -60,6 +64,7 @@ data TokenClass
 	= TokenNum Int
 	| TokenBool Bool
 	| TokenId String
+	| TokenEmpty
 	| TokenQuote
 	| TokenIf
 	| TokenPlus

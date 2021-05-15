@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0c3a019183cdb03f2925def9e788c152e5d655607502c5c05bf1057fedbf270a
+-- hash: fb67ae92365565a1d8ee4820b562e446c915abc0f30a5ce52a2ad43ca956ac98
 
 name:           smallScheme
 version:        0.1.0.0
@@ -34,7 +34,7 @@ library
       Lexer
       Lib
       Parser
-      Parser
+      ParserComb
       Syntax
       Types
   other-modules:
