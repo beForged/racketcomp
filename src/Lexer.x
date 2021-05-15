@@ -23,6 +23,7 @@ tokens :-
 $white+				;
 $digit+				{ lex (TokenNum . read) }
 $alpha [$alpha $digit \_ \']* 	{ lex TokenId 		}
+\'				{ lex' TokenQuote	}
 if				{ lex' TokenIf		}
 \+				{ lex' TokenPlus	}
 \-				{ lex' TokenMinus	}

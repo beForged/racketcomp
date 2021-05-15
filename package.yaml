@@ -2,13 +2,14 @@ name:                smallScheme
 version:             0.1.0.0
 github:              "githubuser/smallScheme"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2021 Author name here"
+author:              "Richard Yu"
+maintainer:          "richardyu042@gmail.com"
+copyright:           "2021 Richard Yu"
 
 extra-source-files:
 - README.md
 - ChangeLog.md
+- src/Lexer.x
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -26,10 +27,8 @@ dependencies:
 - mtl
 - hashable
 - filepath
-  #- state
-  #- reader
-  #- except
-  #- identity
+# array needed for alex
+- array
 
 library:
   source-dirs: src
