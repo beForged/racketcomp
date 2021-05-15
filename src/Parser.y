@@ -41,7 +41,7 @@ Sexp 	: '(' Expr ')' 	{ Expr $2 }
 {- remember to add bool and char to lexer -}
 Expr	: if Expr Expr Expr 	{ If $2 $3 $4 }
 	| let Id Sexp		{ Let $2 $3 }
-	{- | letrec '(' LetRec ') Sexp	{ Letrec $3 $5 } -}
+	{- | letrec '(' LetRec ')' Sexp	{ Letrec $3 $5 } -}
 	| lambda '(' IdList ')' Sexp	{ Lambda $3 $5 }
 	| quote Sexp		{ Quote $2 }
 	| Binary 		{ Binary $1 }
