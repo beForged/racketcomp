@@ -5,7 +5,7 @@ import System.Environment
 import Control.Monad
 import Control.Monad.Except
 import Data.IORef
-import Parser
+import Parser ( parseExpr )
 import Syntax
 import Control.Monad.Identity
 import Control.Monad.Reader
@@ -20,8 +20,8 @@ import Data.Hashable
 
 type Compile_e a = ReaderT Env (ExceptT String (State.StateT Integer Identity)) a
 
-readExpr :: String -> [Val]
-readExpr input = case parse (parseExpr) "lisp" input of
+readExpr :: String -> Sexp
+readExpr input = case (parseExpr) input of
     Left err -> error ("bad parse" ++ (show err))
     Right x -> x
 
@@ -37,7 +37,7 @@ gensym = do
 
 --consider changing label_lambda return into a tuple and putting int val into here so
 --its impossible to duplicate labels
-compile :: [Val] -> Asm
+compile :: Sexp -> Asm
 compile val = case fst (runCompile_e [] 0 (compiler val)) of
     Left er -> error (er)
     Right asm -> asm
@@ -60,6 +60,17 @@ compiler (x : xs) = do --assume this is entry
         entry ++ def ++ 
         [Label "err", Push Rbp, Call (L "error"), Ret]
 -}
+
+compiler :: Sexp -> Compile_e Asm
+compiler (Const a) = compile_e a
+compiler e = preProc e
+
+-- pre processing step for lambdas
+preProc :: Sexp -> Sexp
+preProc (Expr e) = 
+	where travEx (Define name lst sexpr) = 
+	    
+
 
 compiler :: [Val] -> Compile_e Asm
 compiler lst = do

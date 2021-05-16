@@ -24,7 +24,8 @@ $white+				;
 $digit+				{ lex (TokenNum . read) }
 $alpha [$alpha $digit \_ \']* 	{ lex TokenId 		}
 true				{ lex' (TokenBool True)	}
-false				{ lex' (TokenBool False)	}
+false				{ lex' (TokenBool False)}
+define				{ lex' TokenDefine	}
 \'()				{ lex' TokenEmpty	}
 \'				{ lex' TokenQuote	}
 if				{ lex' TokenIf		}
@@ -64,6 +65,7 @@ data TokenClass
 	= TokenNum Int
 	| TokenBool Bool
 	| TokenId String
+	| TokenDefine
 	| TokenEmpty
 	| TokenQuote
 	| TokenIf
@@ -85,7 +87,9 @@ data TokenClass
 unLex :: TokenClass -> String
 unLex (TokenNum n) = show n
 unLex (TokenId s) = show s
+unLex (TokenBool b) = show b
 unLex TokenQuote = "'"
+unLex TokenDefine = "define"
 unLex TokenIf = "if"
 unLex TokenPlus = "+"
 unLex TokenMinus = "-"

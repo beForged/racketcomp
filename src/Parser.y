@@ -16,6 +16,7 @@ import Types
 	num		{ Token _ (TokenNum $$) }
 	id		{ Token _ (TokenId $$) }
 	bool		{ Token _ (TokenBool $$) }
+	define		{ Token _ (TokenDefine }
 	empty		{ Token _ TokenEmpty }
 	quote		{ Token _ TokenQuote }
 	if		{ Token _ TokenIf }
@@ -35,14 +36,17 @@ import Types
 %%
 
 Sexp 	: '(' Expr ')' 	{ Expr $2 }
-      	| num		{ Num $1 }
-     	| bool		{ Boolean $1 }
+      	| Const		{ Const $1 }
+
 {-	| char		{ Char $1 } -}
+Const	: num		{ Num $1 }
+     	| bool		{ Boolean $1 }
 	| empty		{ Empty }
      	
 {- remember to add bool and char to lexer -}
 Expr	: if Sexp Sexp Sexp 	{ If $2 $3 $4 }
 	| let id Sexp		{ Let $2 $3 }
+	| define '(' id IdList ')' Sexp { Define $3 $4 $6 }
 	{- | letrec '(' LetRec ')' Sexp	{ Letrec $3 $5 } -}
 	| lambda '(' IdList ')' Sexp	{ Lambda $3 $5 }
 	| quote Sexp		{ Quote $2 }
